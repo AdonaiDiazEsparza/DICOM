@@ -4,10 +4,10 @@ WORKDIR /app
 
 RUN pip install pydicom pynetdicom
 
-COPY server.py .
+COPY client.py .
 
 RUN mkdir /data
 
 EXPOSE 11112
 
-CMD ["python", "server.py"]
+CMD ["python", "client.py"]
