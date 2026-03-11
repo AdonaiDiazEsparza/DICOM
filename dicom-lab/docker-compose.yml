@@ -1,5 +1,3 @@
-version: "3"
-
 services:
 
   dicom_server:
@@ -10,17 +8,8 @@ services:
     volumes:
       - ./data:/data
 
-  dicom_client1:
+  dicom_client:
     build: ./client
-    depends_on:
-      - dicom_server
-
-  dicom_client2:
-    build: ./client
-    depends_on:
-      - dicom_server
-
-  dicom_malicious_client:
-    build: ./malicious-client
+    container_name: dicom_client
     depends_on:
       - dicom_server

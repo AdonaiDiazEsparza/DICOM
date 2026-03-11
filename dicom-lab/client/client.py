@@ -29,8 +29,8 @@ Acciones disponibles:
 
 """
 
-# SERVER = "dicom_server"
-SERVER = "127.0.0.1"
+SERVER = "dicom_server"
+# SERVER = "127.0.0.1"
 
 PORT = 11112
 

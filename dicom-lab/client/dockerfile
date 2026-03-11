@@ -10,4 +10,4 @@ RUN mkdir /data
 
 EXPOSE 11112
 
-CMD ["python", "client.py"]
+CMD ["sleep", "infinity"]
