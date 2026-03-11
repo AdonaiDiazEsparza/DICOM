@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+
+  dicom_server:
+    build: ./server
+    container_name: dicom_server
+    ports:
+      - "11112:11112"
+    volumes:
+      - ./data:/data
+
+  dicom_client1:
+    build: ./client
+    depends_on:
+      - dicom_server
+
+  dicom_client2:
+    build: ./client
+    depends_on:
+      - dicom_server

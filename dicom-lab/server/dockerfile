@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install pydicom pynetdicom
+
+COPY client.py .
+COPY test.dcm .
+
+CMD ["python", "client.py"]
