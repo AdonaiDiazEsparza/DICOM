@@ -19,3 +19,8 @@ services:
     build: ./client
     depends_on:
       - dicom_server
+
+  dicom_malicious_client:
+    build: ./malicious-client
+    depends_on:
+      - dicom_server
