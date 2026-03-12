@@ -7,7 +7,7 @@ services:
     ports:
       - "11112:11112"
     volumes:
-      - ./data:/data
+      - ./server/data:/data
     networks:
       - dicom_network
 
@@ -17,7 +17,7 @@ services:
       dockerfile: dockerfile
     container_name: dicom_client
     volumes:
-      - ./data:/data
+      - ./client/data:/data
     depends_on:
       - dicom_server
     networks:

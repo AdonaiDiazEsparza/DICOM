@@ -1,4 +1,4 @@
-from pynetdicom import AE
+from pynetdicom import AE, evt
 from pynetdicom.sop_class import (
     Verification,
     CTImageStorage,
@@ -9,34 +9,51 @@ from pynetdicom.sop_class import (
 import pydicom
 from pydicom.dataset import Dataset
 import argparse
-
-MESSAGE = """
-
-Este es el cliente puede generar peticiones al servidor
-
-Bienvenidos a la Villa APT!!!
-
-"""
-
-action_help = """
-Puedes realizar las siguientes acciones
-
-Acciones disponibles:
-- C_ECHO: ver si hay conexion en el servidor
-- C_STORE: Transferir imagen
-- C_FIND: Encontrar Imagen
-- C_MOVE: Pedir que se envien imagenes a otro
-
-"""
+import threading
 
 SERVER = "dicom_server"
-# SERVER = "127.0.0.1"
-
 PORT = 11112
+STORE_PORT = 11113
 
 
-# Funcion para realizar el C_ECHO
+# -------------------------
+# Handler para recibir C-STORE
+# -------------------------
+def handle_store(event):
+
+    ds = event.dataset
+    ds.file_meta = event.file_meta
+
+    filename = f"/data/{ds.SOPInstanceUID}.dcm"
+
+    ds.save_as(filename)
+
+    print("Archivo recibido:", filename)
+
+    return 0x0000
+
+
+# -------------------------
+# Servidor para recibir archivos
+# -------------------------
+def start_storage_scp():
+
+    ae = AE()
+
+    ae.add_supported_context(CTImageStorage)
+
+    handlers = [(evt.EVT_C_STORE, handle_store)]
+
+    print(f"[CLIENT] Storage SCP escuchando en {STORE_PORT}")
+
+    ae.start_server(("0.0.0.0", STORE_PORT), block=True, evt_handlers=handlers)
+
+
+# -------------------------
+# C-ECHO
+# -------------------------
 def c_echo():
+
     ae = AE()
     ae.add_requested_context(Verification)
 
@@ -48,16 +65,18 @@ def c_echo():
 
         if status:
             print("C-ECHO OK")
-        else:
-            print("C-ECHO fallo")
 
         assoc.release()
 
     else:
-        print("No se pudo establecer la asociacion con el servidor")
+        print("No se pudo establecer la asociacion")
 
-# Funcion para Realizar el C_STORE
+
+# -------------------------
+# C-STORE
+# -------------------------
 def c_store(path):
+
     ae = AE()
     ae.add_requested_context(CTImageStorage)
 
@@ -66,20 +85,19 @@ def c_store(path):
     assoc = ae.associate(SERVER, PORT)
 
     if assoc.is_established:
+
         status = assoc.send_c_store(ds)
 
-        if status:
-            print("C-STORE enviado correctamente")
-        else:
-            print("Error en C-STORE")
+        print(status)
 
         assoc.release()
-    
-    else:
-        print("No se pudo establecer la asociacion con el servidor")
 
-# Funcion para realizar el C_FIND nos ayuda a encontrar los estudios de los pacientes
+
+# -------------------------
+# C-FIND
+# -------------------------
 def c_find(patient_name="*"):
+
     ae = AE()
     ae.add_requested_context(StudyRootQueryRetrieveInformationModelFind)
 
@@ -96,21 +114,30 @@ def c_find(patient_name="*"):
             StudyRootQueryRetrieveInformationModelFind
         )
 
-        print(responses)
+        for status, identifier in responses:
 
-        for (status, identifier) in responses:
-            if status and identifier:
+            if status:
+                print("STATUS:", status)
+
+            if identifier:
                 print(identifier)
 
         assoc.release()
-    
-    else:
-        print("No se pudo establecer la asociacion con el servidor")
 
-# Funcion que nos ayuda a obtener el estudio en especifico de un cliente
-def c_move(study_uid, destination_ae="CLIENT"):
+
+# -------------------------
+# C-MOVE
+# -------------------------
+def c_move(study_uid):
+
+    # arrancar SCP en segundo plano
+    t = threading.Thread(target=start_storage_scp, daemon=True)
+    t.start()
+
     ae = AE()
+
     ae.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
+    ae.add_requested_context(CTImageStorage)
 
     assoc = ae.associate(SERVER, PORT)
 
@@ -122,26 +149,30 @@ def c_move(study_uid, destination_ae="CLIENT"):
 
         responses = assoc.send_c_move(
             ds,
-            destination_ae,
+            "CLIENT",
             StudyRootQueryRetrieveInformationModelMove
         )
 
-        for (status, identifier) in responses:
-            print(status)
+        for status, identifier in responses:
+            print("MOVE STATUS:", status)
 
         assoc.release()
 
     else:
-        print("No se pudo establecer la asociacion con el servidor")
+        print("No se pudo establecer la asociacion")
 
+
+# -------------------------
+# CLI
+# -------------------------
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description=MESSAGE)
+    parser = argparse.ArgumentParser()
 
-    parser.add_argument("--action", required=True, help=action_help)
-    parser.add_argument("--path", help="Es la ruta del archivo que se enviara con la accion C_STORE")
-    parser.add_argument("--patient", help="El Paciente que se busca en el servidor")
-    parser.add_argument("--study_uid", help="")
+    parser.add_argument("--action", required=True)
+    parser.add_argument("--path")
+    parser.add_argument("--patient")
+    parser.add_argument("--study_uid")
 
     args = parser.parse_args()
 
