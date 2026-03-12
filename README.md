@@ -100,23 +100,23 @@ Estas peticiones se realizan con diferentes servicios que manejan el flujo de la
 
 Supongamos que queremos obtener información de una red hospitalaria, este incluye el protocolo DICOM. ¿Cómo podriamos nosotros estar desde nuestras casas y a la vez estar conectado?
 
-Bueno, podriamos utilizar a alguien que incluya un dispositivo que se conecte a la red, por ejemplo podriamos conectar a la red alguna Raspberry o un dispositivo. En este repositorio simulamos la red con dockers los cuales integran un servidor, un cliente y nuestro agente malicioso. 
+Bueno, podriamos usar a alguien que incluya un dispositivo que se conecte a la red, por ejemplo podriamos conectar a la red alguna Raspberry o un dispositivo. En este repositorio simulamos la red con dockers los cuales integran un servidor, un cliente y nuestro agente malicioso. 
 
 El servidor funciona como el sistema de almacenamiento, el cual recibe archivos y puede proveerlos dependiendo de lo que pida el cliente. 
 
 El rol del cliente lo que hace es enviar archivos al servidor para que este los almacene y a su vez este poder hacer peticiones y recibirlos.
 
-Nuestro agente malicioso, tiene el proposito de obtener información, generar e incluir archivos en el servidor.
+Nuestro agente malicioso, tiene el proposito de obtener información, generar e incluir archivos en el servidor (muy parecido al cliente).
 
 ### ¿Cómo podriamos realizar el ataque?
 
-Al estar el agente malicioso conectado a la red, nosotros podemos hacer peticiones al servidor, este no valida si es un dispositivo legitimo, solamente recibe la petición y realiza la acción del servicio que se le envíe.
+Al estar el agente malicioso conectado a la red, nosotros podemos hacer peticiones al servidor, este no valida si es un dispositivo legítimo, solamente recibe la petición y realiza la acción del servicio que se le envíe.
 
 Por ejemplo nosotros descargamos un archivo de algún paciente, lo que hacemos ahora es modificar este archivo e integrarle un payload o un shellcode. ¿Porqué agregamos esto?
 
-Hokma nos indicó que en cada computadora que tuviera el programa para visualizar los estudios, este ejecutaba una terminal o un command prompt al momento de abrir un estudio. Si nosotros incluimos algun payload malicioso en un archivo DICOM, este se va ejecutar cuando el personal de medicina visualice el archivo que nosotros modifiquemos.
+Hokma nos indicó que en cada computadora que tuviera el programa para visualizar los estudios, este ejecutaba una terminal o un command prompt al momento de abrir un estudio. Si nosotros incluimos algún payload malicioso en un archivo DICOM, este se va ejecutar cuando el personal de medicina visualice el archivo que nosotros modifiquemos.
 
 En conclusión esto nos funciona como un vector de ataque, con un equipo en el cual podemos hacer modificaciones de manera remota. Así podriamos cambiar nuestros payloads y modificar los archivos a nuestro antojo, cargandolos en el servidor esperando a que alguna persona lo descargue y se .
 
-## Conclusion 
+## Conclusión 
 El protocolo DICOM puede ser usado cómo vector de ataque si no se realiza una buena implementación de seguridad del sistema, en este caso que hemos visto, los datos son entregados y recibidos por cualquier cliente o dispositivo que este dentro de la red y maneje el protocolo, comprometiendo no solamente los datos de los pacientes, sino la red e infraestructura del hospital por realizar ejecuciones de terminales en los programas de los visualizadores.
