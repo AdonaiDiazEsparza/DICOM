@@ -96,6 +96,8 @@ def c_find(patient_name="*"):
             StudyRootQueryRetrieveInformationModelFind
         )
 
+        print(responses)
+
         for (status, identifier) in responses:
             if status and identifier:
                 print(identifier)

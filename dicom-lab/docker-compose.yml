@@ -1,15 +1,28 @@
 services:
-
   dicom_server:
-    build: ./server
+    build:
+      context: ./server
+      dockerfile: dockerfile
     container_name: dicom_server
     ports:
       - "11112:11112"
     volumes:
       - ./data:/data
+    networks:
+      - dicom_network
 
   dicom_client:
-    build: ./client
+    build:
+      context: ./client
+      dockerfile: dockerfile
     container_name: dicom_client
+    volumes:
+      - ./data:/data
     depends_on:
       - dicom_server
+    networks:
+      - dicom_network
+
+networks:
+  dicom_network:
+    driver: bridge

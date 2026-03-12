@@ -1,2 +1,8 @@
 # Entorno Virtual
 DicomEnv/*
+
+# Ignorar los datos
+Dataset/*
+
+# Ignorar data del docker
+dicom-lab/data/*
