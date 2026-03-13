@@ -17,23 +17,6 @@ STORE_PORT = 11113
 
 
 # -------------------------
-# Handler para recibir C-STORE
-# -------------------------
-def handle_store(event):
-
-    ds = event.dataset
-    ds.file_meta = event.file_meta
-
-    filename = f"/data/{ds.SOPInstanceUID}.dcm"
-
-    ds.save_as(filename)
-
-    print("Archivo recibido:", filename)
-
-    return 0x0000
-
-
-# -------------------------
 # Servidor para recibir archivos
 # -------------------------
 def start_storage_scp():
@@ -128,39 +111,21 @@ def c_find(patient_name="*"):
 # -------------------------
 # C-MOVE
 # -------------------------
-def c_move(study_uid):
-
-    # arrancar SCP en segundo plano
-    t = threading.Thread(target=start_storage_scp, daemon=True)
-    t.start()
-
-    ae = AE()
-
+def c_move(study_uid, device):
+    ae = AE(ae_title=b'CLIENT_SCU')
     ae.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
-    ae.add_requested_context(CTImageStorage)
-
+    
     assoc = ae.associate(SERVER, PORT)
-
     if assoc.is_established:
-
         ds = Dataset()
         ds.QueryRetrieveLevel = "STUDY"
         ds.StudyInstanceUID = study_uid
-
-        responses = assoc.send_c_move(
-            ds,
-            "CLIENT",
-            StudyRootQueryRetrieveInformationModelMove
-        )
-
+        
+        responses = assoc.send_c_move(ds, device.encode(), StudyRootQueryRetrieveInformationModelMove)
+        
         for status, identifier in responses:
-            print("MOVE STATUS:", status)
-
+            print(f"Estado del movimiento: {status.Status}")
         assoc.release()
-
-    else:
-        print("No se pudo establecer la asociacion")
-
 
 # -------------------------
 # CLI
@@ -173,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--path")
     parser.add_argument("--patient")
     parser.add_argument("--study_uid")
+    parser.add_argument("--device")
 
     args = parser.parse_args()
 
@@ -186,7 +152,10 @@ if __name__ == "__main__":
         c_find(args.patient)
 
     elif args.action == "C_MOVE":
-        c_move(args.study_uid)
+        if args.device:
+            c_move(args.study_uid, args.device)
+        else:
+            print("Falto agregar el dispositivo a mover")
 
     else:
         print("Accion no soportada")

@@ -81,24 +81,25 @@ def handle_find(event):
 # -------------------------
 def handle_move(event):
 
-    # IP del cliente que pidió el MOVE
-    client_ip = event.assoc.requestor.address
+    move_ae = event.move_destination
+    requester_ip = event.assoc.requestor.address
 
-    # puerto donde el cliente debe aceptar C-STORE
-    client_port = 11113
+    dest_ip = move_ae.decoce()
 
-    print(f"[C-MOVE] Cliente solicitante: {client_ip}")
+    dest_port = 11113
 
-    # decirle a pynetdicom dónde enviar las imágenes
-    yield (client_ip, client_port)
+    print(f"[C-MOVE] solicitado por {requester_ip}")
+    print(f"[C-MOVE] destino: ")
+
+    print(f"[C-MOVE] enviando a {dest_ip}:{dest_port}")
+
+    yield (dest_ip, dest_port)
 
     files = [f"/data/{f}" for f in os.listdir("/data") if f.endswith(".dcm")]
 
-    print(f"[C-MOVE] Enviando {len(files)} archivos")
-
     for f in files:
         ds = pydicom.dcmread(f)
-        yield ds
+        yield 0xFF00, ds
 
 
 # -------------------------

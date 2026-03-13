@@ -5,8 +5,7 @@ WORKDIR /app
 RUN pip install pydicom pynetdicom
 
 COPY server.py .
-
-RUN mkdir /data
+COPY data .
 
 EXPOSE 11112
 

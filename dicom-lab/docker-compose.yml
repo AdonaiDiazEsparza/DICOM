@@ -1,28 +1,31 @@
 services:
+
   dicom_server:
     build:
       context: ./server
       dockerfile: dockerfile
-    container_name: dicom_server
+    container_name: "dicom_server"
     ports:
       - "11112:11112"
     volumes:
       - ./server/data:/data
     networks:
-      - dicom_network
+      - dicom_net
 
   dicom_client:
     build:
       context: ./client
       dockerfile: dockerfile
-    container_name: dicom_client
+    container_name: "dicom_client"
+    ports:
+      - "11113:11113"
     volumes:
-      - ./client/data:/data
-    depends_on:
-      - dicom_server
+      - ./client/data:/app/data
+      - ./client/data_received:/data
+    command: python storage_scp.py
     networks:
-      - dicom_network
+      - dicom_net
 
 networks:
-  dicom_network:
+  dicom_net:
     driver: bridge

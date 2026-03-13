@@ -4,10 +4,13 @@ WORKDIR /app
 
 RUN pip install pydicom pynetdicom
 
+RUN mkdir data
+RUN mkdir data_received
+
+COPY data ./data/
 COPY client.py .
+COPY storage_scp.py .
 
-RUN mkdir /data
+EXPOSE 11113
 
-EXPOSE 11112
-
-CMD ["sleep", "infinity"]
+CMD ["python", "-u", "storage_scp.py"]

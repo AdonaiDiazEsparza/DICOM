@@ -23,7 +23,7 @@ def create_dummy_dicom(patien_name ,filename, path="Dataset"):
     ds = FileDataset(filename, {}, file_meta=file_meta, preamble=b"\0" * 128)
     
     # Datos que se usan en C_FIND
-    ds.PatientName = "SIMULACION^PACIENTE^UNO"
+    ds.PatientName = patien_name
     ds.PatientID = "ID-001"
     ds.ContentDate = datetime.datetime.now().strftime('%Y%m%d')
     ds.ContentTime = datetime.datetime.now().strftime('%H%M%S')
