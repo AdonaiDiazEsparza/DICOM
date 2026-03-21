@@ -1,9 +1,11 @@
-from pynetdicom import AE, evt
+from pynetdicom import AE, evt, StoragePresentationContexts
 from pynetdicom.sop_class import (
     Verification,
     CTImageStorage,
     StudyRootQueryRetrieveInformationModelFind,
-    StudyRootQueryRetrieveInformationModelMove
+    StudyRootQueryRetrieveInformationModelGet,
+    PatientRootQueryRetrieveInformationModelGet
+    
 )
 
 import pydicom
@@ -15,22 +17,61 @@ SERVER = "dicom_server"
 PORT = 11112
 STORE_PORT = 11113
 
+# Handle for store
+def handle_store(event):
+
+    ds = event.dataset
+    ds.file_meta = event.file_meta
+
+    filename = f"data_received/{ds.SOPInstanceUID}.dcm"
+
+    ds.save_as(filename)
+
+    print(f"[CLIENT] imagen recibida -> {filename}")
+
+    return 0x0000
 
 # -------------------------
-# Servidor para recibir archivos
+# C-GET
 # -------------------------
-def start_storage_scp():
+
+def c_get(study_uid):
 
     ae = AE()
+
+    ae.add_requested_context(StudyRootQueryRetrieveInformationModelGet)
 
     ae.add_supported_context(CTImageStorage)
 
     handlers = [(evt.EVT_C_STORE, handle_store)]
 
-    print(f"[CLIENT] Storage SCP escuchando en {STORE_PORT}")
+    assoc = ae.associate(
+        SERVER,
+        PORT,
+        evt_handlers=handlers
+    )
 
-    ae.start_server(("0.0.0.0", STORE_PORT), block=True, evt_handlers=handlers)
+    if assoc.is_established:
 
+        ds = Dataset()
+        ds.QueryRetrieveLevel = "STUDY"       
+        ds.StudyInstanceUID = study_uid
+
+        responses = assoc.send_c_get(
+            ds,
+            StudyRootQueryRetrieveInformationModelGet
+        )
+
+        for status, identifier in responses:
+            if status:
+                print(f"C-GET status: 0x{status.Status:04X}")
+            else:
+                print("C-GET: conexión perdida o error")
+
+        assoc.release()
+
+    else:
+        print("No se pudo establecer la asociación")
 
 # -------------------------
 # C-ECHO
@@ -107,26 +148,6 @@ def c_find(patient_name="*"):
 
         assoc.release()
 
-
-# -------------------------
-# C-MOVE
-# -------------------------
-def c_move(study_uid, device):
-    ae = AE(ae_title=b'CLIENT_SCU')
-    ae.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
-    
-    assoc = ae.associate(SERVER, PORT)
-    if assoc.is_established:
-        ds = Dataset()
-        ds.QueryRetrieveLevel = "STUDY"
-        ds.StudyInstanceUID = study_uid
-        
-        responses = assoc.send_c_move(ds, device.encode(), StudyRootQueryRetrieveInformationModelMove)
-        
-        for status, identifier in responses:
-            print(f"Estado del movimiento: {status.Status}")
-        assoc.release()
-
 # -------------------------
 # CLI
 # -------------------------
@@ -151,11 +172,8 @@ if __name__ == "__main__":
     elif args.action == "C_FIND":
         c_find(args.patient)
 
-    elif args.action == "C_MOVE":
-        if args.device:
-            c_move(args.study_uid, args.device)
-        else:
-            print("Falto agregar el dispositivo a mover")
+    elif args.action == "C_GET":
+        c_get(args.study_uid)
 
     else:
         print("Accion no soportada")

@@ -3,7 +3,8 @@ from pynetdicom.sop_class import (
     Verification,
     CTImageStorage,
     StudyRootQueryRetrieveInformationModelFind,
-    StudyRootQueryRetrieveInformationModelMove
+    StudyRootQueryRetrieveInformationModelMove,
+    StudyRootQueryRetrieveInformationModelGet
 )
 
 import pydicom
@@ -77,30 +78,53 @@ def handle_find(event):
 
 
 # -------------------------
-# C_MOVE
+# C_GET
 # -------------------------
-def handle_move(event):
+def handle_get(event):
+    import os
 
-    move_ae = event.move_destination
-    requester_ip = event.assoc.requestor.address
+    addr = event.assoc.requestor.address
+    identifier = event.identifier
+    requested_study_uid = getattr(identifier, "StudyInstanceUID", None)
 
-    dest_ip = move_ae.decoce()
+    print(f"[C-GET] StudyInstanceUID solicitado: '{requested_study_uid}'")
 
-    dest_port = 11113
+    data_dir = "/data"
+    matched_files = []
 
-    print(f"[C-MOVE] solicitado por {requester_ip}")
-    print(f"[C-MOVE] destino: ")
+    for f in os.listdir(data_dir):
+        if not f.endswith(".dcm"):
+            continue
 
-    print(f"[C-MOVE] enviando a {dest_ip}:{dest_port}")
+        fpath = os.path.join(data_dir, f)
 
-    yield (dest_ip, dest_port)
+        try:
+            meta = pydicom.dcmread(fpath, stop_before_pixels=True)
+            file_uid = str(getattr(meta, "StudyInstanceUID", "")).strip()
+            req_uid  = str(requested_study_uid).strip() if requested_study_uid else None
 
-    files = [f"/data/{f}" for f in os.listdir("/data") if f.endswith(".dcm")]
+            # Debug: ver qué UIDs hay en disco
+            print(f"[C-GET] Archivo: {f} | UID en archivo: '{file_uid}'")
 
-    for f in files:
-        ds = pydicom.dcmread(f)
-        yield 0xFF00, ds
+            if req_uid and file_uid != req_uid:
+                continue
 
+            matched_files.append(fpath)
+
+        except Exception as e:
+            print(f"[C-GET] Error leyendo metadata de {f}: {e}")
+
+
+    yield len(matched_files)
+
+    for fpath in matched_files:
+        try:
+            ds = pydicom.dcmread(fpath)
+            print(f"[C-GET] Enviando: {os.path.basename(fpath)}")
+            yield (0xFF00, ds)
+        except Exception as e:
+            print(f"[C-GET] Error enviando {fpath}: {e}")
+            yield (0xC000, None)  # error en sub-operacion
 
 # -------------------------
 # Asociaciones
@@ -115,7 +139,7 @@ handlers = [
     (evt.EVT_C_ECHO, handle_echo),
     (evt.EVT_C_STORE, handle_store),
     (evt.EVT_C_FIND, handle_find),
-    (evt.EVT_C_MOVE, handle_move),
+    (evt.EVT_C_GET, handle_get),
 ]
 
 
@@ -125,6 +149,7 @@ ae.add_supported_context(Verification)
 ae.add_supported_context(CTImageStorage)
 ae.add_supported_context(StudyRootQueryRetrieveInformationModelFind)
 ae.add_supported_context(StudyRootQueryRetrieveInformationModelMove)
+ae.add_supported_context(StudyRootQueryRetrieveInformationModelGet)
 
 print("Servidor DICOM escuchando en puerto 11112")
 
